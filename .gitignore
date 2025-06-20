@@ -1,0 +1,66 @@
+#Ignorar investor ya que no la vamos a usar
+investor/
+frontend/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+venv/
+ENV/
+backend_env/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS specific
+.DS_Store
+.directory
+Thumbs.db
+
+# Azure
+.azure/
+*.pfx
+*.pem
+azure.json
+
+# Coverage
+.coverage
+htmlcov/
+
+# Misc
+*.bak
+*.swp
+*~
+.python-version
+node_modules/
