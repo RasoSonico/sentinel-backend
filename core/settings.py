@@ -49,11 +49,10 @@ INSTALLED_APPS = [
     'obra',
     'cronograma',
     'django_filters',
-    'drf_yasg',
-
-    
+    'drf_yasg',   
 ]
 
+#Middleware
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
