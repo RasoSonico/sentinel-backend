@@ -1,3 +1,4 @@
+#Importar librerias necesarias
 import jwt
 import requests
 import logging
