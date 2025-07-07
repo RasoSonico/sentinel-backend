@@ -238,7 +238,7 @@ if not DEBUG:
     # CORS más restrictivo en producción
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
-        "sentinel-backend-app-bcbjhve6fcd6f4fz.eastus2-01.azurewebsites.net",  # Actualizaremos esto después
+        "https://sentinel-backend-app-bcbjhve6fcd6f4fz.mexicocentral-01.azurewebsites.net",  
     ]
 
 # Logging para Azure
