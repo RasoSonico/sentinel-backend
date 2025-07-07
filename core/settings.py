@@ -159,6 +159,18 @@ AZURE_AUTHORITY = config('AZURE_AUTHORITY', default=f'https://login.microsoftonl
 AZURE_REDIRECT_URI = config('AZURE_REDIRECT_URI', default='')
 AZURE_SCOPE = config('AZURE_SCOPE', default='openid profile email')
 
+# Azure Blob Storage settings
+AZURE_STORAGE_ACCOUNT_NAME = config('AZURE_STORAGE_ACCOUNT_NAME', default='sentinelfilenphotos')
+AZURE_BLOB_STORAGE_CONNECTION_STRING = config('AZURE_BLOB_STORAGE_CONNECTION_STRING', default='')
+AZURE_PHOTOS_CONTAINER = config('AZURE_PHOTOS_CONTAINER', default='photos')
+
+# Photo settings
+PHOTO_MAX_SIZE = 5 * 1024 * 1024  # 5MB
+PHOTO_ALLOWED_FORMATS = ['jpg', 'jpeg', 'png', 'heic']
+PHOTO_THUMBNAIL_SIZE = (300, 300)  # Thumbnail dimensions
+PHOTO_MAX_DIMENSION = 1920  # Max width/height for uploaded photos
+PHOTO_JPEG_QUALITY = 85  # JPEG compression quality
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
@@ -169,8 +181,8 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # Azure primero
         'usuarios.authentication.AzureExternalIDAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
+        #'rest_framework.authentication.SessionAuthentication', #En un futuro para AdminWeb
+        #'rest_framework.authentication.BasicAuthentication',
 
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',

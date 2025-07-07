@@ -1,6 +1,5 @@
 #Ignorar investor ya que no la vamos a usar
-investor/
-frontend/
+AZURE_BLOB_API_DOCS.md
 
 # Python
 __pycache__/
@@ -37,6 +36,7 @@ staticfiles/
 venv/
 ENV/
 backend_env/
+develop_venv/
 
 # IDE
 .vscode/

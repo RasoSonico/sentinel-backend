@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from catalogo.models import Concept
 from django.db.models import Sum, F
@@ -137,3 +138,131 @@ class CommitmentTracking(models.Model):
 
     def __str__(self):
         return f"Compromiso para {self.estimation_detail.concept.description} - {self.planned_date}"
+    
+class Photo(models.Model):
+    """
+    Modelo mejorado para fotografías con metadatos completos
+    """
+    UPLOAD_STATUS_CHOICES = [
+        ('PENDING', 'Pendiente de subida'),
+        ('UPLOADING', 'Subiendo'),
+        ('COMPLETED', 'Completada'),
+        ('FAILED', 'Falló'),
+    ]
+    
+    # Identificación
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    
+    # Información del archivo
+    original_filename = models.CharField(max_length=255)
+    blob_path = models.CharField(max_length=500, unique=True)  # ruta en blob
+    blob_url = models.URLField(max_length=1000, blank=True, null=True)
+    thumbnail_blob_path = models.CharField(max_length=500, blank=True, null=True)
+    thumbnail_blob_url = models.URLField(max_length=1000, blank=True, null=True)
+    
+    # Información de tamaño y formato
+    file_size_bytes = models.BigIntegerField()
+    content_type = models.CharField(max_length=50)
+    image_width = models.PositiveIntegerField()
+    image_height = models.PositiveIntegerField()
+    
+    # Estado de subida
+    upload_status = models.CharField(
+        max_length=20, 
+        choices=UPLOAD_STATUS_CHOICES, 
+        default='PENDING'
+    )
+    
+    # Metadatos de usuario y tiempo
+    uploaded_by = models.ForeignKey('usuarios.User', on_delete=models.CASCADE, related_name='uploaded_photos')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    taken_at = models.DateTimeField(null=True, blank=True)  # fecha de captura según EXIF
+    
+    # Ubicación GPS
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    gps_accuracy = models.FloatField(null=True, blank=True)  # precisión en metros
+    
+    # Información del dispositivo
+    device_model = models.CharField(max_length=100, blank=True, null=True)
+    camera_make = models.CharField(max_length=50, blank=True, null=True)
+    camera_model = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Metadatos EXIF completos (JSON)
+    exif_data = models.JSONField(default=dict, blank=True)
+    
+    # Relaciones
+    physical_advance = models.ForeignKey(
+        'Physical', 
+        on_delete=models.CASCADE, 
+        related_name='photos'
+    )
+    construction = models.ForeignKey(
+        'obra.Construction',
+        on_delete=models.CASCADE,
+        related_name='photos'
+    )
+    
+    # Campos de procesamiento
+    is_processed = models.BooleanField(default=False)
+    processing_notes = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Fotografía'
+        verbose_name_plural = 'Fotografías'
+        ordering = ['-uploaded_at']
+        indexes = [
+            models.Index(fields=['upload_status']),
+            models.Index(fields=['construction', 'uploaded_at']),
+            models.Index(fields=['physical_advance']),
+            models.Index(fields=['uploaded_by', 'uploaded_at']),
+        ]
+
+    def __str__(self):
+        return f"Foto {self.original_filename} - {self.physical_advance}"
+    
+    @property
+    def file_size_mb(self):
+        """Retorna el tamaño del archivo en MB"""
+        return round(self.file_size_bytes / (1024 * 1024), 2)
+    
+    @property
+    def image_resolution(self):
+        """Retorna la resolución como string"""
+        return f"{self.image_width}x{self.image_height}"
+    
+    @property
+    def has_gps(self):
+        """Verifica si la foto tiene coordenadas GPS"""
+        return self.latitude is not None and self.longitude is not None
+    
+    def get_display_url(self, with_sas=True, expiry_hours=24):
+        """
+        Retorna URL de visualización, generando SAS token si es necesario
+        """
+        if not with_sas and self.blob_url:
+            return self.blob_url
+            
+        # Si necesitamos SAS token, lo generaremos en el servicio
+        from .services.blob_service import blob_service
+        try:
+            return blob_service.generate_read_sas_token(self.blob_path, expiry_hours)
+        except Exception:
+            return self.blob_url  # Fallback
+    
+    def get_thumbnail_url(self, with_sas=True, expiry_hours=24):
+        """
+        Retorna URL del thumbnail
+        """
+        if not self.thumbnail_blob_path:
+            return None
+            
+        if not with_sas and self.thumbnail_blob_url:
+            return self.thumbnail_blob_url
+            
+        from .services.blob_service import blob_service
+        try:
+            return blob_service.generate_read_sas_token(self.thumbnail_blob_path, expiry_hours)
+        except Exception:
+            return self.thumbnail_blob_url
+

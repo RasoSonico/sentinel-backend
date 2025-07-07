@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import User, UserRole
+from .models import User, UserRole, Role
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -74,4 +74,15 @@ class UserRoleSerializer(serializers.ModelSerializer):
         if UserRole.objects.filter(user=data['user'], role=data['role']).exists():
             raise serializers.ValidationError("Este usuario ya tiene asignado este rol")
         return data
+
+class RoleSerializer(serializers.ModelSerializer):
+    user_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Role
+        fields = ['id', 'name', 'description', 'user_count']
+        
+    def get_user_count(self, obj):
+        # Devuelve el número de usuarios con este rol
+        return obj.user_roles.count()
 
