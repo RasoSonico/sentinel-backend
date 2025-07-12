@@ -27,17 +27,17 @@ class ConstructionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtrar obras según permisos del usuario"""
         user = self.request.user
-        # Añadir esta condición para manejar usuarios anónimos
-        if user.is_anonymous or settings.DEBUG:
-            return Construction.objects.all()
-        if user.is_staff:
-            return Construction.objects.all()
+        queryset = Construction.objects.all()
         
-        # Solo mostrar obras donde el usuario tiene asignación activa
-        return Construction.objects.filter(
-            user_obras__user=user,
-            user_obras__is_active=True
-        ).distinct()
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(id__in=user_constructions)
+        
+        return queryset
     
     @action(detail=False, methods=['get'])
     def my_constructions(self, request):
@@ -67,14 +67,13 @@ class UserConstructionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        # Añadir esta condición para manejar usuarios anónimos
-        if user.is_anonymous or settings.DEBUG:
-            return UserConstruction.objects.all()
-        if user.is_staff:
-            return UserConstruction.objects.all()
+        queryset = UserConstruction.objects.all()
         
-        # Usuario normal solo ve sus propias asignaciones
-        return UserConstruction.objects.filter(user=user)
+        # Filtrar por usuario autenticado
+        if user.is_authenticated and not user.is_staff:
+            queryset = queryset.filter(user=user)
+        
+        return queryset
 
 class ConstructionChangeControlViewSet(viewsets.ModelViewSet):
     queryset = ConstructionChangeControl.objects.all()
@@ -86,21 +85,17 @@ class ConstructionChangeControlViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        # Añadir esta condición para manejar usuarios anónimos
-        if user.is_anonymous or settings.DEBUG:
-            return ConstructionChangeControl.objects.all()
-        if user.is_staff:
-            return ConstructionChangeControl.objects.all()
+        queryset = ConstructionChangeControl.objects.all()
         
-        # Solo mostrar cambios de obras donde el usuario tiene acceso
-        user_constructions = UserConstruction.objects.filter(
-            user=user, 
-            is_active=True
-        ).values_list('construction', flat=True)
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            user_constructions = UserConstruction.objects.filter(
+                user=user, 
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
         
-        return ConstructionChangeControl.objects.filter(
-            construction__in=user_constructions
-        )
+        return queryset
     
     def perform_create(self, serializer):
         # Verificar si el usuario es anónimo

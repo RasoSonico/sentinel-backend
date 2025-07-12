@@ -11,30 +11,53 @@ class CatalogList(generics.ListCreateAPIView):
     
     def get_queryset(self):
         user = self.request.user
-        #Para pruebas
-        if user.is_anonymous or settings.DEBUG:
-            return Catalog.objects.all()
-        user_constructions = user.user_obras.filter(is_active=True).values_list('construction', flat=True)
-        return Catalog.objects.filter(construction__in=user_constructions)
+        queryset = Catalog.objects.all()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
+        
+        return queryset
 
 class CatalogDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
+        
+        return queryset
 
 class WorkItemList(generics.ListCreateAPIView):
     queryset = WorkItem.objects.all()
     serializer_class = WorkItemSerializer
 
     def get_queryset(self):
+        user = self.request.user
         queryset = WorkItem.objects.all()
         
-        # Filtrar por obras del usuario
-        user = self.request.user
-        #Para pruebas
-        if user.is_anonymous or settings.DEBUG:
-            return WorkItem.objects.all()        
-        if not user.is_staff:  # Si no es admin, filtrar por obras asignadas
-            user_constructions = user.user_obras.filter(is_active=True).values_list('construction', flat=True)
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
             queryset = queryset.filter(catalog__construction__in=user_constructions)
         
         # Mantener filtro por catálogo
@@ -47,22 +70,37 @@ class WorkItemList(generics.ListCreateAPIView):
 class WorkItemDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = WorkItem.objects.all()
     serializer_class = WorkItemSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(catalog__construction__in=user_constructions)
+        
+        return queryset
 
 class ConceptList(generics.ListCreateAPIView):
     queryset = Concept.objects.all()
     serializer_class = ConceptSerializer
     
     def get_queryset(self):
+        user = self.request.user
         queryset = Concept.objects.all()
         
-        # Filtrar por obras del usuario
-        user = self.request.user
-        #Para pruebas
-        if user.is_anonymous or settings.DEBUG:
-            return Concept.objects.all()
-
-        if not user.is_staff:  # Si no es admin, filtrar por obras asignadas
-            user_constructions = user.user_obras.filter(is_active=True).values_list('construction', flat=True)
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
             queryset = queryset.filter(catalog__construction__in=user_constructions)
         
         # Mantener filtros existentes
@@ -79,3 +117,18 @@ class ConceptList(generics.ListCreateAPIView):
 class ConceptDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Concept.objects.all()
     serializer_class = ConceptSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(catalog__construction__in=user_constructions)
+        
+        return queryset

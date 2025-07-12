@@ -28,7 +28,17 @@ class ScheduleViewSet(viewsets.ModelViewSet):
         return ScheduleDetailSerializer
     
     def get_queryset(self):
+        user = self.request.user
         queryset = Schedule.objects.all()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
         
         # Filtrar por obra si se proporciona el ID
         construction_id = self.request.query_params.get('construction_id')
@@ -130,7 +140,17 @@ class ActivityViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
     
     def get_queryset(self):
+        user = self.request.user
         queryset = Activity.objects.all()
+        
+        # Filtrar por obras asignadas al usuario (a través de schedule)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(schedule__construction__in=user_constructions)
         
         # Filtrar por cronograma si se proporciona el ID
         schedule_id = self.request.query_params.get('schedule_id')
@@ -223,7 +243,17 @@ class CriticalPathViewSet(viewsets.ModelViewSet):
     serializer_class = CriticalPathSerializer
     
     def get_queryset(self):
+        user = self.request.user
         queryset = CriticalPath.objects.all()
+        
+        # Filtrar por obras asignadas al usuario (a través de schedule)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(schedule__construction__in=user_constructions)
         
         # Filtrar por cronograma si se proporciona el ID
         schedule_id = self.request.query_params.get('schedule_id')

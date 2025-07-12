@@ -41,9 +41,26 @@ class PhysicalListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         """
-        Permite filtrado adicional por parámetros de query
+        Filtrar avances según las obras asignadas al usuario autenticado
         """
+        user = self.request.user
         queryset = super().get_queryset()
+        
+        # Filtrar por permisos de usuario (solo obras asignadas)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            
+            # Obtener IDs de construcciones asignadas al usuario
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            
+            # Filtrar avances solo de conceptos que pertenecen a obras asignadas
+            # Flujo: Physical → Concept → Catalog → Construction
+            queryset = queryset.filter(
+                concept__catalog__construction__in=user_constructions
+            )
         
         # Filtro por rango de fechas
         start_date = self.request.query_params.get('start_date')
@@ -66,6 +83,35 @@ class PhysicalListCreateView(generics.ListCreateAPIView):
             
         return queryset
     
+    def perform_create(self, serializer):
+        """
+        Validar que el usuario tenga acceso a la obra del concepto antes de crear el avance físico
+        """
+        user = self.request.user
+        concept = serializer.validated_data['concept']
+        
+        # Solo validar si el usuario está autenticado y no es staff
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            
+            # Verificar si el usuario tiene acceso a la obra del concepto
+            # Flujo de validación: User → UserConstruction → Construction ← Catalog ← Concept
+            has_access = UserConstruction.objects.filter(
+                user=user,
+                construction=concept.catalog.construction,
+                is_active=True
+            ).exists()
+            
+            if not has_access:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(
+                    f"No tienes permisos para registrar avances en la obra: '{concept.catalog.construction.name}'. "
+                    f"El concepto '{concept.description}' pertenece a una obra no asignada."
+                )
+        
+        # Si tiene permisos o es staff, crear el avance
+        serializer.save()
+    
 class PhysicalDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Vista para obtener, actualizar o eliminar un avance físico específico.
@@ -75,10 +121,62 @@ class PhysicalDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Physical.objects.all()
     serializer_class = PhysicalSerializer
+    
+    def get_queryset(self):
+        """
+        Filtrar avances según las obras asignadas al usuario autenticado
+        """
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por permisos de usuario (solo obras asignadas)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            
+            # Obtener IDs de construcciones asignadas al usuario
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            
+            # Filtrar avances solo de conceptos que pertenecen a obras asignadas
+            queryset = queryset.filter(
+                concept__catalog__construction__in=user_constructions
+            )
+        
+        return queryset
 
     def perform_update(self, serializer):
+        """
+        Validar permisos y registrar cambios de estado en el historial
+        """
+        user = self.request.user
         instance = self.get_object()
         old_status = instance.status
+        
+        # Validar si se está cambiando el concepto (no debería permitirse normalmente)
+        if 'concept' in serializer.validated_data:
+            new_concept = serializer.validated_data['concept']
+            
+            # Solo validar si el usuario no es staff
+            if user.is_authenticated and not user.is_staff:
+                from obra.models import UserConstruction
+                
+                # Verificar acceso al nuevo concepto
+                has_access = UserConstruction.objects.filter(
+                    user=user,
+                    construction=new_concept.catalog.construction,
+                    is_active=True
+                ).exists()
+                
+                if not has_access:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied(
+                        f"No tienes permisos para asignar el concepto '{new_concept.description}' "
+                        f"que pertenece a la obra '{new_concept.catalog.construction.name}'"
+                    )
+        
+        # Actualizar el avance
         updated_instance = serializer.save()
         
         # Si cambió el status, registrar en historial
@@ -477,6 +575,21 @@ class EstimationListCreateView(generics.ListCreateAPIView):
     ordering_fields = ['period_start', 'period_end', 'total_amount']
     ordering = ['-period_end']  # Más reciente primero
     
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
+        
+        return queryset
+    
     def perform_create(self, serializer):
         """
         Al crear, guarda primero sin total y luego actualiza el total
@@ -490,6 +603,21 @@ class EstimationDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Estimation.objects.all()
     serializer_class = EstimationSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
+        
+        return queryset
 
 class EstimationItemListCreateView(generics.ListCreateAPIView):
     """
@@ -499,6 +627,21 @@ class EstimationItemListCreateView(generics.ListCreateAPIView):
     serializer_class = EstimationDetailSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['estimation', 'concept']
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario (a través de estimation.construction)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(estimation__construction__in=user_constructions)
+        
+        return queryset
     
     def perform_create(self, serializer):
         """
@@ -515,6 +658,21 @@ class EstimationItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = EstimationDetail.objects.all()
     serializer_class = EstimationDetailSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+        
+        # Filtrar por obras asignadas al usuario (a través de estimation.construction)
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(estimation__construction__in=user_constructions)
+        
+        return queryset
     
     def perform_update(self, serializer):
         """Al actualizar, recalcular el total de la estimación"""
@@ -891,7 +1049,17 @@ class EstimationPlanningViewSet(viewsets.ModelViewSet):
         return EstimationSerializer
     
     def get_queryset(self):
+        user = self.request.user
         queryset = Estimation.objects.all()
+        
+        # Filtrar por obras asignadas al usuario
+        if user.is_authenticated and not user.is_staff:
+            from obra.models import UserConstruction
+            user_constructions = UserConstruction.objects.filter(
+                user=user,
+                is_active=True
+            ).values_list('construction', flat=True)
+            queryset = queryset.filter(construction__in=user_constructions)
         
         # Filtrar por obra
         construction_id = self.request.query_params.get('construction_id')
