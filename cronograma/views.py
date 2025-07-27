@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Prefetch, Count, Sum, F, Q
@@ -18,6 +18,7 @@ from .filters import ScheduleFilter, ActivityFilter
 class ScheduleViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar cronogramas de obra"""
     queryset = Schedule.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ScheduleFilter
     search_fields = ['name', 'description', 'construction__name']
@@ -134,6 +135,7 @@ class ScheduleViewSet(viewsets.ModelViewSet):
 class ActivityViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar actividades de un cronograma"""
     queryset = Activity.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ActivitySerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = ActivityFilter
@@ -240,6 +242,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 class CriticalPathViewSet(viewsets.ModelViewSet):
     """ViewSet para gestionar rutas críticas"""
     queryset = CriticalPath.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = CriticalPathSerializer
     
     def get_queryset(self):

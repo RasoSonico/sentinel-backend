@@ -47,7 +47,7 @@ class AzureBlobService:
     def generate_blob_path(self, obra_id: int, avance_id: int, filename: str) -> str:
         """
         Genera la ruta del blob siguiendo la estructura definida:
-        /{hash3}-obra-{obra_id}/{año}-{mes}/{timestamp}_{avance_id}_{filename}
+        /{hash3}-obra-{obra_id}/{año}/{mes}/{timestamp}_{avance_id}_{filename}
         """
         now = timezone.now()
         
@@ -61,9 +61,10 @@ class AzureBlobService:
         # Limpiar filename de caracteres especiales
         safe_filename = self._sanitize_filename(filename)
         
-        # Construir la ruta
-        year_month = now.strftime("%Y-%m")
-        folder = f"{hash_3}-obra-{obra_id}/{year_month}"
+        # Construir la ruta con año y mes separados
+        year = now.strftime("%Y")
+        month = now.strftime("%m")
+        folder = f"{hash_3}-obra-{obra_id}/{year}/{month}"
         blob_name = f"{timestamp}_{avance_id}_{safe_filename}"
         
         return f"{folder}/{blob_name}"

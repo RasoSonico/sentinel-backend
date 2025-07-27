@@ -1,6 +1,5 @@
 # views.py
-from rest_framework import generics
-
+from rest_framework import generics, permissions
 from core import settings
 from .models import Catalog, WorkItem, Concept
 from .serializers import CatalogSerializer, WorkItemSerializer, ConceptSerializer
@@ -8,6 +7,7 @@ from .serializers import CatalogSerializer, WorkItemSerializer, ConceptSerialize
 class CatalogList(generics.ListCreateAPIView):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
@@ -27,6 +27,7 @@ class CatalogList(generics.ListCreateAPIView):
 class CatalogDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Catalog.objects.all()
     serializer_class = CatalogSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
@@ -46,6 +47,7 @@ class CatalogDetail(generics.RetrieveUpdateDestroyAPIView):
 class WorkItemList(generics.ListCreateAPIView):
     queryset = WorkItem.objects.all()
     serializer_class = WorkItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -70,6 +72,7 @@ class WorkItemList(generics.ListCreateAPIView):
 class WorkItemDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = WorkItem.objects.all()
     serializer_class = WorkItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
@@ -89,6 +92,7 @@ class WorkItemDetail(generics.RetrieveUpdateDestroyAPIView):
 class ConceptList(generics.ListCreateAPIView):
     queryset = Concept.objects.all()
     serializer_class = ConceptSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user
@@ -117,6 +121,7 @@ class ConceptList(generics.ListCreateAPIView):
 class ConceptDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Concept.objects.all()
     serializer_class = ConceptSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
         user = self.request.user

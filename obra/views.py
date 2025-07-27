@@ -18,7 +18,7 @@ else:
 class ConstructionViewSet(viewsets.ModelViewSet):
     queryset = Construction.objects.all()
     serializer_class = ConstructionSerializer
-    permission_classes = [PermissionClass]  # Usar la clase condicional
+    permission_classes = [permissions.IsAuthenticated]  
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'country', 'state']
     search_fields = ['name', 'client', 'description']
@@ -61,7 +61,7 @@ class ConstructionViewSet(viewsets.ModelViewSet):
 class UserConstructionViewSet(viewsets.ModelViewSet):
     queryset = UserConstruction.objects.all()
     serializer_class = UserConstructionSerializer
-    permission_classes = [PermissionClass]  # Usar la clase condicional
+    permission_classes = [permissions.IsAuthenticated]  # Usar la clase condicional
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['user', 'construction', 'role', 'is_active']
     
@@ -78,7 +78,7 @@ class UserConstructionViewSet(viewsets.ModelViewSet):
 class ConstructionChangeControlViewSet(viewsets.ModelViewSet):
     queryset = ConstructionChangeControl.objects.all()
     serializer_class = ConstructionChangeControlSerializer
-    permission_classes = [PermissionClass]  # Usar la clase condicional
+    permission_classes = [permissions.IsAuthenticated]  # Usar la clase condicional
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['construction', 'modified_by']
     ordering_fields = ['modification_date']

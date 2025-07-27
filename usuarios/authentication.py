@@ -30,6 +30,7 @@ class AzureExternalIDAuthentication(authentication.BaseAuthentication):
                 token,
                 options={"verify_signature": False, "verify_exp": False}
             )
+            logger.info(f"  🎯 Expected audience should be: api://sentinel-auth or {settings.AZURE_CLIENT_ID}")
             
             logger.info(f"📋 Token info - Tenant: {unverified_payload.get('tid')}, User: {unverified_payload.get('unique_name')}")
             logger.info(f"🎯 Audience: {unverified_payload.get('aud')}")
