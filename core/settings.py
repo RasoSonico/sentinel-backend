@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'avance',
     'obra',
     'cronograma',
+    'recursos',
+    'incidencias',
     'django_filters',
     'drf_yasg',   
 ]
@@ -186,7 +188,7 @@ REST_FRAMEWORK = {
         #'rest_framework.authentication.BasicAuthentication',
 
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'core.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 15,
     'PAGE_SIZE_QUERY_PARAM': 'page_size',
     'MAX_PAGE_SIZE': 100,
