@@ -14,6 +14,7 @@ from .models import (Physical,
                      CommitmentTracking, PhysicalStatusHistory)
 from .serializers import (
     PhysicalSerializer, 
+    PhysicalDetailedSerializer,
     EstimationSerializer, 
     EstimationDetailSerializer, 
     EstimationListSerializer, 
@@ -28,23 +29,44 @@ from datetime import datetime, timedelta
 class PhysicalListCreateView(generics.ListCreateAPIView):
     """
     Vista para listar todos los avances físicos y crear nuevos.
-    GET: Lista todos los avances con opción de filtrado
+    GET: Lista todos los avances con opción de filtrado e información expandida
     POST: Crea un nuevo avance
+    
+    Parámetros de consulta adicionales:
+    - detailed: Si es 'true', devuelve información expandida con concepto y partida
+    - construction: Filtro opcional por ID de construcción
     """
     queryset = Physical.objects.all()
-    serializer_class = PhysicalSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['concept', 'status', 'date']
     search_fields = ['comments']
     ordering_fields = ['date', 'volume']
     ordering = ['-date']  # Ordenamiento por defecto: más reciente primero
     
+    def get_serializer_class(self):
+        """
+        Retorna el serializer apropiado basado en el parámetro 'detailed'
+        """
+        if self.request.query_params.get('detailed', '').lower() == 'true':
+            return PhysicalDetailedSerializer
+        return PhysicalSerializer
+    
     def get_queryset(self):
         """
-        Filtrar avances según las obras asignadas al usuario autenticado
+        Filtrar avances según las obras asignadas al usuario autenticado.
+        Optimiza queries con select_related cuando se usa el modo detailed.
         """
         user = self.request.user
         queryset = super().get_queryset()
+        
+        # Optimización: Si se solicita información detallada, usar select_related
+        if self.request.query_params.get('detailed', '').lower() == 'true':
+            queryset = queryset.select_related(
+                'concept',
+                'concept__work_item',
+                'concept__catalog',
+                'concept__catalog__construction'
+            )
         
         # Filtrar por permisos de usuario (solo obras asignadas)
         if user.is_authenticated and not user.is_staff:
@@ -80,6 +102,11 @@ class PhysicalListCreateView(generics.ListCreateAPIView):
         work_item_id = self.request.query_params.get('work_item')
         if work_item_id:
             queryset = queryset.filter(concept__work_item_id=work_item_id)
+            
+        # Filtro adicional por construcción (opcional para mayor flexibilidad)
+        construction_id = self.request.query_params.get('construction')
+        if construction_id:
+            queryset = queryset.filter(concept__catalog__construction_id=construction_id)
             
         return queryset
     

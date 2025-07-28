@@ -26,6 +26,54 @@ class PhysicalSerializer(serializers.ModelSerializer):
         if not Concept.objects.filter(id=value.id).exists():
             raise serializers.ValidationError("El concepto no existe.")
         return value
+
+class PhysicalDetailedSerializer(serializers.ModelSerializer):
+    """
+    Serializer con información expandida del concepto y partida para optimizar llamadas a API.
+    Incluye toda la información necesaria para mostrar cards de avances físicos.
+    """
+    # Información del concepto
+    concept_id = serializers.IntegerField(source='concept.id', read_only=True)
+    concept_description = serializers.CharField(source='concept.description', read_only=True)
+    concept_unit = serializers.CharField(source='concept.unit', read_only=True)
+    concept_quantity = serializers.DecimalField(source='concept.quantity', max_digits=10, decimal_places=2, read_only=True)
+    concept_unit_price = serializers.DecimalField(source='concept.unit_price', max_digits=15, decimal_places=2, read_only=True)
+    concept_classification = serializers.CharField(source='concept.clasification', read_only=True)
+    
+    # Información de la partida (work item)
+    work_item_id = serializers.IntegerField(source='concept.work_item.id', read_only=True)
+    work_item_name = serializers.CharField(source='concept.work_item.name', read_only=True)
+    
+    # Información del catálogo y construcción (para debugging/filtrado)
+    catalog_id = serializers.IntegerField(source='concept.catalog.id', read_only=True)
+    catalog_name = serializers.CharField(source='concept.catalog.name', read_only=True)
+    construction_id = serializers.IntegerField(source='concept.catalog.construction.id', read_only=True)
+    construction_name = serializers.CharField(source='concept.catalog.construction.name', read_only=True)
+    
+    # Campos calculados
+    total_amount = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Physical
+        fields = [
+            # Campos básicos del avance físico
+            'id', 'volume', 'date', 'status', 'comments',
+            # Información del concepto
+            'concept_id', 'concept_description', 'concept_unit', 
+            'concept_quantity', 'concept_unit_price', 'concept_classification',
+            # Información de la partida
+            'work_item_id', 'work_item_name',
+            # Información del catálogo y construcción
+            'catalog_id', 'catalog_name', 'construction_id', 'construction_name',
+            # Campos calculados
+            'total_amount'
+        ]
+    
+    def get_total_amount(self, obj):
+        """Calcula el monto total: volumen * precio unitario"""
+        if obj.volume and obj.concept and obj.concept.unit_price:
+            return obj.volume * obj.concept.unit_price
+        return 0
     
 # avance/serializers.py - añadir este serializer
 class PhysicalStatusHistorySerializer(serializers.ModelSerializer):
