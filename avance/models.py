@@ -9,7 +9,7 @@ class Physical(models.Model):
     id = models.AutoField(primary_key=True)
     concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='physical_progress')
     volume = models.DecimalField(max_digits=10, decimal_places=2)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=[
         ('PENDING', 'Por revisar'),
         ('APPROVED', 'Aprobado'),

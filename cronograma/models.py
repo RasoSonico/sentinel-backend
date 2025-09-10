@@ -56,8 +56,8 @@ class Activity(models.Model):
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    start_date = models.DateTimeField(auto_now_add=True)
+    end_date = models.DateTimeField(auto_now_add=True)
     progress_percentage = models.DecimalField(
         max_digits=5, 
         decimal_places=2, 

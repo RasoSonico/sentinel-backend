@@ -11,7 +11,7 @@ class Machinery(models.Model):
     serial_number = models.CharField(max_length=100, blank=True, null=True)
     number = models.IntegerField(default=0, blank=True, null=True) #Cantidad de maquinaria
     is_active = models.BooleanField(default=True)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     active_time = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, blank=True, null=True)
     activity = models.CharField(max_length=100, blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
@@ -51,7 +51,7 @@ class WorkForce(models.Model):
     construction = models.ForeignKey('obra.Construction', on_delete=models.CASCADE, related_name='workforce', null=True)
     number = models.IntegerField(default=0, blank=True, null=True) #Cantidad de trabajadores
     activity = models.CharField(max_length=100, blank=True, null=True)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     comments = models.TextField(blank=True, null=True)
 
     def __str__(self):

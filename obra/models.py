@@ -14,7 +14,7 @@ class Construction(models.Model):
     state = models.CharField(max_length=100, blank=True, null=True)
     client = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
-    creation_date = models.DateField(auto_now_add=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
     start_date = models.DateField()
     end_date = models.DateField()
     budget = models.DecimalField(max_digits=15, decimal_places=2, default=0)
@@ -46,7 +46,7 @@ class UserConstruction(models.Model):
     construction = models.ForeignKey(Construction, on_delete=models.PROTECT, related_name='user_obras')
     role = models.ForeignKey(Role, on_delete=models.PROTECT, related_name='user_obras')
     is_active = models.BooleanField(default=True)
-    asignation_date = models.DateField(auto_now_add=True)
+    asignation_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Usuario-Obra'

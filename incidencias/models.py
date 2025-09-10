@@ -9,7 +9,7 @@ class Incident(models.Model):
     clasification = models.ForeignKey('IncidentClassification', on_delete=models.PROTECT, related_name='incidents', null=True)
     construction = models.ForeignKey('obra.Construction', on_delete=models.CASCADE, related_name='incidents', null=True)
     user = models.ForeignKey('usuarios.User', on_delete=models.PROTECT, related_name='incidents', null=True)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateTimeField(auto_now_add=True)
     description = models.TextField(blank=True, null=True)
 
 
