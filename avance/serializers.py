@@ -1,7 +1,7 @@
 # avance/serializers.py (modificaciones)
 from rest_framework import serializers
 from .models import Physical, Estimation, EstimationDetail, CommitmentTracking, PhysicalStatusHistory
-from catalogo.models import Concept
+from catalogo.models import Concept, Catalog, WorkItem
 from catalogo.serializers import ConceptSerializer
 from cronograma.serializers import ActivitySerializer
 
@@ -211,3 +211,53 @@ class EstimationSerializer(serializers.ModelSerializer):
             if data['period_start'] > data['period_end']:
                 raise serializers.ValidationError("La fecha de inicio no puede ser posterior a la fecha de fin.")
         return data
+
+# Serializers para el endpoint de prefetch /api/avance/base/
+class ConceptPrefetchSerializer(serializers.ModelSerializer):
+    """
+    Serializer optimizado para conceptos en el prefetch
+    """
+    price = serializers.DecimalField(source='unit_price', max_digits=15, decimal_places=2, read_only=True)
+    
+    class Meta:
+        model = Concept
+        fields = [
+            'id', 
+            'description', 
+            'unit', 
+            'quantity', 
+            'price',
+            'clasification'
+        ]
+
+class WorkItemPrefetchSerializer(serializers.ModelSerializer):
+    """
+    Serializer optimizado para partidas con sus conceptos
+    """
+    concepts = ConceptPrefetchSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = WorkItem
+        fields = [
+            'id',
+            'name', 
+            'concepts'
+        ]
+
+class CatalogPrefetchSerializer(serializers.ModelSerializer):
+    """
+    Serializer principal para el prefetch completo de catálogos
+    """
+    construction_id = serializers.IntegerField(source='construction.id', read_only=True)
+    construction_name = serializers.CharField(source='construction.name', read_only=True)
+    work_items = WorkItemPrefetchSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Catalog
+        fields = [
+            'id',
+            'name',
+            'construction_id',
+            'construction_name', 
+            'work_items'
+        ]

@@ -2,10 +2,11 @@ from rest_framework import viewsets, generics, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Case, When, Value, Avg, Q
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField, Case, When, Value, Avg, Q, Prefetch
 from django.db.models.functions import Extract
 from django.utils import timezone
 from rest_framework.views import APIView
+from django.conf import settings
 
 from obra.models import Construction
 from .models import (Physical, 
@@ -19,7 +20,8 @@ from .serializers import (
     EstimationDetailSerializer, 
     EstimationListSerializer, 
     EstimationDetailedSerializer, 
-    CommitmentTrackingSerializer)
+    CommitmentTrackingSerializer,
+    CatalogPrefetchSerializer)
 from catalogo.models import Concept, Catalog, WorkItem
 from django_filters.rest_framework import DjangoFilterBackend
 from cronograma.models import Schedule, Activity, ActivityConcept
@@ -1317,3 +1319,108 @@ class CommitmentTrackingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(planned_date__gte=planned_date_start, planned_date__lte=planned_date_end)
         
         return queryset
+
+class CatalogBasePrefetchView(APIView):
+    """
+    Vista optimizada para prefetch de catálogos completos para funcionalidad offline.
+    
+    Retorna jerarquía completa: Catalog -> WorkItem -> Concept
+    con query optimizada para evitar N+1 queries.
+    
+    Endpoints:
+    GET /api/avance/base/ - Todos los catálogos de obras asignadas al usuario
+    GET /api/avance/base/?construction_id=5 - Catálogos de una obra específica
+    GET /api/avance/base/?active_only=true - Solo elementos activos (default)
+    """
+    
+    def get(self, request):
+        try:
+            # Parámetros de filtrado
+            construction_id = request.query_params.get('construction_id')
+            active_only = request.query_params.get('active_only', 'true').lower() == 'true'
+            
+            # Obtener construcciones asignadas al usuario
+            user = request.user
+            if user.is_authenticated and not user.is_staff:
+                from obra.models import UserConstruction
+                user_constructions = UserConstruction.objects.filter(
+                    user=user,
+                    is_active=True
+                ).values_list('construction', flat=True)
+            else:
+                # Si es staff, puede ver todas las construcciones
+                from obra.models import Construction
+                user_constructions = Construction.objects.values_list('id', flat=True)
+            
+            # Query base de catálogos
+            catalogs_query = Catalog.objects.filter(
+                construction__in=user_constructions
+            )
+            
+            # Aplicar filtros
+            if construction_id:
+                catalogs_query = catalogs_query.filter(construction_id=construction_id)
+            
+            if active_only:
+                catalogs_query = catalogs_query.filter(is_active=True)
+            
+            # Query optimizada con select_related y prefetch_related
+            # Esto evita N+1 queries trayendo toda la jerarquía en 2-3 queries
+            catalogs = catalogs_query.select_related(
+                'construction'  # Información de la obra en la misma query
+            ).prefetch_related(
+                # Prefetch optimizado para work_items y concepts
+                # Esto trae todos los work_items y concepts en queries separadas pero eficientes
+                Prefetch(
+                    'work_items',
+                    queryset=WorkItem.objects.filter(
+                        is_active=True if active_only else Q(is_active__in=[True, False])
+                    ).prefetch_related(
+                        Prefetch(
+                            'concepts',
+                            queryset=Concept.objects.filter(
+                                is_active=True if active_only else Q(is_active__in=[True, False])
+                            ).order_by('id')  # Ordenamiento consistente
+                        )
+                    ).order_by('id')
+                )
+            ).order_by('id')
+            
+            # Serializar los datos
+            serializer = CatalogPrefetchSerializer(catalogs, many=True)
+            
+            # Calcular estadísticas
+            total_catalogs = len(serializer.data)
+            total_work_items = sum(len(catalog['work_items']) for catalog in serializer.data)
+            total_concepts = sum(
+                len(work_item['concepts']) 
+                for catalog in serializer.data 
+                for work_item in catalog['work_items']
+            )
+            
+            # Respuesta estructurada
+            response_data = {
+                "catalogs": serializer.data,
+                "meta": {
+                    "total_catalogs": total_catalogs,
+                    "total_work_items": total_work_items,
+                    "total_concepts": total_concepts,
+                    "user_constructions": list(user_constructions),
+                    "filters_applied": {
+                        "construction_id": construction_id,
+                        "active_only": active_only
+                    },
+                    "generated_at": timezone.now().isoformat()
+                }
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {
+                    "error": "Error interno del servidor",
+                    "details": str(e) if settings.DEBUG else "Contacte al administrador"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -37,5 +37,9 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.ProgressDashboardView.as_view(), name='progress-dashboard'),
+    
+    # Prefetch para funcionalidad offline
+    path('base/', views.CatalogBasePrefetchView.as_view(), name='catalog-base-prefetch'),
+    
     path('', include(router.urls)),
 ]
